@@ -8,3 +8,5 @@ frontend/.next
 **/.venv
 **/.env
 **/.env.save
+frontend/.env.local
+.DS_Store

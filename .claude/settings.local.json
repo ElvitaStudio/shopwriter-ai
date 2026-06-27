@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -m venv .venv)",
+      "Bash(.venv/bin/pip install *)",
+      "Bash(.venv/bin/python -c \"from app.config import settings; from app.database import init_db; from app.main import app; print\\('✅ Backend imports OK'\\)\")",
+      "Bash(npm install *)",
+      "Bash(npm run *)",
+      "Bash(.venv/bin/python -c \"from config import settings; print\\('✅ config OK, token:', settings.TELEGRAM_BOT_TOKEN[:20], '...'\\)\")",
+      "Bash(.venv/bin/python -c \"from bot import main; print\\('✅ bot.py imports OK'\\)\")",
+      "Bash(.venv/bin/python -c \"from app.config import settings; from app.main import app; print\\('✅ OK, DB:', settings.DATABASE_URL\\)\")"
+    ]
+  }
+}

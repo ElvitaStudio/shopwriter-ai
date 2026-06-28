@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     SUPPORT_USERNAME: str = "@your_support"
     CHANNEL_USERNAME: str = "@shopwriter_hub"
     ADMIN_TELEGRAM_ID: int = 0
+    ADMIN_TOKEN: str = "change-me-secret"
 
 
 settings = Settings()

@@ -8,7 +8,8 @@
       "Bash(npm run *)",
       "Bash(.venv/bin/python -c \"from config import settings; print\\('✅ config OK, token:', settings.TELEGRAM_BOT_TOKEN[:20], '...'\\)\")",
       "Bash(.venv/bin/python -c \"from bot import main; print\\('✅ bot.py imports OK'\\)\")",
-      "Bash(.venv/bin/python -c \"from app.config import settings; from app.main import app; print\\('✅ OK, DB:', settings.DATABASE_URL\\)\")"
+      "Bash(.venv/bin/python -c \"from app.config import settings; from app.main import app; print\\('✅ OK, DB:', settings.DATABASE_URL\\)\")",
+      "Bash(.venv/bin/python -c ' *)"
     ]
   }
 }

@@ -9,6 +9,7 @@ class BotSettings(BaseSettings):
     BACKEND_URL: str = "http://localhost:8008"
     SUPPORT_USERNAME: str = "@your_support"
     ADMIN_TELEGRAM_ID: int = 0
+    ADMIN_TOKEN: str = "change-me-secret"
 
 
 settings = BotSettings()

@@ -19,15 +19,6 @@ class BroadcastState(StatesGroup):
     waiting_message = State()
 
 
-def admin_only(func):
-    async def wrapper(message: Message, *args, **kwargs):
-        if message.from_user.id != settings.ADMIN_TELEGRAM_ID:
-            return
-        return await func(message, *args, **kwargs)
-    wrapper.__name__ = func.__name__
-    return wrapper
-
-
 def _admin_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [
@@ -52,8 +43,9 @@ def _format_stats(stats: dict) -> str:
 
 
 @router.message(Command("admin"))
-@admin_only
 async def admin_handler(message: Message):
+    if message.from_user.id != settings.ADMIN_TELEGRAM_ID:
+        return
     async with httpx.AsyncClient(base_url=settings.BACKEND_URL) as client:
         resp = await client.get("/api/admin/stats", headers=HEADERS)
     if resp.status_code != 200:

@@ -7,10 +7,10 @@ import { api, type Transaction, type UserProfile } from '@/lib/api'
 import { getTranslations, type Locale } from '@/lib/i18n'
 
 const PACKAGES = [
-  { id: 'tokens_20',   tokens: 20,   stars: 50,   emoji: '🌱' },
-  { id: 'tokens_100',  tokens: 100,  stars: 200,  emoji: '⚡️' },
-  { id: 'tokens_500',  tokens: 500,  stars: 800,  emoji: '🚀' },
-  { id: 'tokens_1000', tokens: 1000, stars: 1400, emoji: '💼' },
+  { id: 'start',    tokens: 20,   stars: 50,   emoji: '🌱' },
+  { id: 'basic',    tokens: 100,  stars: 200,  emoji: '⚡️' },
+  { id: 'pro',      tokens: 500,  stars: 800,  emoji: '🚀' },
+  { id: 'business', tokens: 1000, stars: 1400, emoji: '💼' },
 ]
 
 const PACKAGE_NAMES: Record<Locale, string[]> = {

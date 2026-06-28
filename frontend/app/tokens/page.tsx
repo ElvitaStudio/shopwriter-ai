@@ -49,7 +49,7 @@ export default function TokensPage() {
     const twa = getTelegramWebApp()
     if (twa) {
       // Opens bot with deep link — bot sends invoice with Telegram Stars
-      twa.openTelegramLink(`https://t.me/ShopWriterBot?start=buy_${pkg.tokens}`)
+      twa.openTelegramLink(`https://t.me/shopwriter_bot?start=buy_${pkg.tokens}`)
       twa.close()
     }
   }

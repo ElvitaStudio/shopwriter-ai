@@ -10,7 +10,9 @@
       "Bash(.venv/bin/python -c \"from bot import main; print\\('✅ bot.py imports OK'\\)\")",
       "Bash(.venv/bin/python -c \"from app.config import settings; from app.main import app; print\\('✅ OK, DB:', settings.DATABASE_URL\\)\")",
       "Bash(.venv/bin/python -c ' *)",
-      "Bash(.venv/bin/python -c \"from handlers import admin; print\\('✅ OK'\\)\")"
+      "Bash(.venv/bin/python -c \"from handlers import admin; print\\('✅ OK'\\)\")",
+      "Bash(curl -s \"https://api.telegram.org/bot8925943558:AAFZjvo_nlNHNSBq3dkYmmZ6IFTJloTI_-0/getMe\")",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(d['result']['username']\\)\")"
     ]
   }
 }

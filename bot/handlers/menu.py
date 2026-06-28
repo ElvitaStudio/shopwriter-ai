@@ -214,6 +214,20 @@ async def successful_payment(message: Message):
     await message.answer(texts.get(lang, texts["ru"]), parse_mode="HTML")
 
 
+def _referral_keyboard(ref_link: str) -> InlineKeyboardMarkup:
+    share_text = "По моей ссылке ты можешь запустить ShopWriter AI и получить бонусные токены!"
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(
+            text="📨 Пригласить друга",
+            url=f"https://t.me/share/url?url={ref_link}&text={share_text}",
+        )],
+        [InlineKeyboardButton(
+            text="📋 Скопировать ссылку",
+            callback_data="referral_copy_link",
+        )],
+    ])
+
+
 @router.message(lambda m: _is_button(m.text or "", "referral"))
 async def handle_referral(message: Message):
     telegram_id = message.from_user.id
@@ -221,17 +235,34 @@ async def handle_referral(message: Message):
         async with httpx.AsyncClient(base_url=settings.BACKEND_URL) as client:
             resp = await client.get(f"/api/referral/{telegram_id}")
             data = resp.json()
-        text = (
-            f"🤝 <b>Партнёрка</b>\n\n"
-            f"Твоя ссылка:\n<code>{data['referral_link']}</code>\n\n"
-            f"👥 Приглашено: {data['total_referred']}\n"
-            f"💎 Заработано токенов: {data['earned_tokens']}\n\n"
-            f"За каждого приглашённого — +{data['bonus_per_referral']} токена!"
-        )
-        await message.answer(text, parse_mode="HTML",
-                             reply_markup=_get_webapp_button(f"{settings.MINI_APP_URL}/referral", "🤝 Открыть партнёрку"))
     except Exception:
         await message.answer("Ошибка загрузки реферальной информации")
+        return
+
+    ref_link = data["referral_link"]
+    text = (
+        "🎁 <b>Приглашайте друзей и получайте токены!</b>\n\n"
+        "За каждого нового пользователя, который впервые запустит ShopWriter AI по вашей ссылке, "
+        "вы получите <b>+3 токена</b>, а друг тоже получит <b>+3 токена</b>.\n\n"
+        "Награда начисляется автоматически.\n\n"
+        "👇 Выберите действие:"
+    )
+    await message.answer(text, parse_mode="HTML", reply_markup=_referral_keyboard(ref_link))
+
+
+@router.callback_query(lambda c: c.data == "referral_copy_link")
+async def handle_referral_copy(call: CallbackQuery):
+    telegram_id = call.from_user.id
+    try:
+        async with httpx.AsyncClient(base_url=settings.BACKEND_URL) as client:
+            resp = await client.get(f"/api/referral/{telegram_id}")
+            data = resp.json()
+    except Exception:
+        await call.answer("Ошибка", show_alert=True)
+        return
+
+    await call.answer()
+    await call.message.answer(data["referral_link"])
 
 
 @router.message(lambda m: _is_button(m.text or "", "support"))

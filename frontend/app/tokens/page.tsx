@@ -66,7 +66,7 @@ export default function TokensPage() {
     setBuying(pkg.id)
     setDebugMsg(`⏳ Создаём инвойс для ${pkg.id}...`)
     try {
-      const res = await fetch('http://localhost:8008/api/tokens/create_invoice', {
+      const res = await fetch('/api/tokens/create_invoice', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ telegram_id: uid, package_id: pkg.id }),

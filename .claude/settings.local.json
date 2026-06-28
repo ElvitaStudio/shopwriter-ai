@@ -12,7 +12,8 @@
       "Bash(.venv/bin/python -c ' *)",
       "Bash(.venv/bin/python -c \"from handlers import admin; print\\('✅ OK'\\)\")",
       "Bash(curl -s \"https://api.telegram.org/bot8925943558:AAFZjvo_nlNHNSBq3dkYmmZ6IFTJloTI_-0/getMe\")",
-      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(d['result']['username']\\)\")"
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(d['result']['username']\\)\")",
+      "Bash(.venv/bin/python -c \"from handlers.start import WELCOME_IMAGE; print\\('Path:', WELCOME_IMAGE\\); print\\('✅ OK'\\)\")"
     ]
   }
 }

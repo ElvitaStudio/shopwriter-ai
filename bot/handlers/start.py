@@ -1,12 +1,18 @@
+import logging
+from pathlib import Path
+
 import httpx
 from aiogram import Router
 from aiogram.filters import CommandStart
-from aiogram.types import Message
+from aiogram.types import Message, FSInputFile
 
 from config import settings
 from keyboards.main_menu import get_main_menu, get_open_app_button
 
 router = Router()
+logger = logging.getLogger(__name__)
+
+WELCOME_IMAGE = Path("assets/welcome.jpg")
 
 WELCOME = {
     "ru": (
@@ -27,6 +33,12 @@ WELCOME = {
         "💎 You've got <b>5 free tokens</b> to start — that's 5 free cards!\n\n"
         "Choose an action from the menu below 👇"
     ),
+}
+
+MENU_LABEL = {
+    "ru": "Главное меню:",
+    "ua": "Головне меню:",
+    "en": "Main menu:",
 }
 
 
@@ -61,9 +73,19 @@ async def start_handler(message: Message):
 
     welcome_text = WELCOME.get(language, WELCOME["ru"]).format(name=tg_user.first_name or "друг")
 
-    await message.answer(
-        welcome_text,
-        parse_mode="HTML",
-        reply_markup=get_open_app_button(settings.MINI_APP_URL, language),
-    )
-    await message.answer("Главное меню:", reply_markup=get_main_menu(language))
+    if WELCOME_IMAGE.exists():
+        await message.answer_photo(
+            photo=FSInputFile(WELCOME_IMAGE),
+            caption=welcome_text,
+            parse_mode="HTML",
+            reply_markup=get_open_app_button(settings.MINI_APP_URL, language),
+        )
+    else:
+        logger.warning("welcome.jpg not found at %s, sending text only", WELCOME_IMAGE)
+        await message.answer(
+            welcome_text,
+            parse_mode="HTML",
+            reply_markup=get_open_app_button(settings.MINI_APP_URL, language),
+        )
+
+    await message.answer(MENU_LABEL.get(language, "Главное меню:"), reply_markup=get_main_menu(language))

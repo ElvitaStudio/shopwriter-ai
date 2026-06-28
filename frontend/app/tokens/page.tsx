@@ -34,24 +34,18 @@ export default function TokensPage() {
     const saved = (localStorage.getItem('locale') as Locale) ?? getTelegramLanguage()
     setLocale(saved)
     const uid = getTelegramUserId()
+    if (!uid) return
 
-    Promise.all([
-      uid ? api.getUser(uid) : Promise.resolve(null),
-      uid ? api.getTokenHistory(uid) : Promise.resolve([]),
-    ]).then(([u, txs]) => {
-      if (u) setUser(u)
-      setHistory(txs)
-    }).catch(() => null)
+    api.getUser(uid).then(setUser).catch(() => null)
+    api.getTokenHistory(uid).then(setHistory).catch(() => null)
   }, [])
 
   const t = getTranslations(locale)
   const packageNames = PACKAGE_NAMES[locale] ?? PACKAGE_NAMES.ru
 
   const handleBuy = async (pkg: typeof PACKAGES[number]) => {
-    console.log('[handleBuy] clicked', pkg.id)
     const uid = getTelegramUserId()
     const twa = getTelegramWebApp()
-    console.log('[handleBuy] uid:', uid, 'twa:', !!twa)
     setDebugMsg(`uid=${uid} twa=${!!twa} pkg=${pkg.id}`)
 
     if (!uid) {
@@ -71,27 +65,23 @@ export default function TokensPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ telegram_id: uid, package_id: pkg.id }),
       })
-      console.log('[handleBuy] fetch status:', res.status)
       if (!res.ok) {
         const text = await res.text()
-        setDebugMsg(`❌ Backend error ${res.status}: ${text}`)
+        setDebugMsg(`❌ Backend ${res.status}: ${text}`)
         return
       }
       const data = await res.json()
-      console.log('[handleBuy] invoice_url:', data.invoice_url)
-      setDebugMsg(`✅ invoice_url получен, открываем...`)
+      setDebugMsg('✅ Инвойс получен, открываем оплату...')
       twa.openInvoice(data.invoice_url, (status: string) => {
-        console.log('[handleBuy] payment status:', status)
-        setDebugMsg(`💳 Статус оплаты: ${status}`)
+        setDebugMsg(`💳 Статус: ${status}`)
         if (status === 'paid') {
-          api.getUser(uid).then((u) => setUser(u)).catch(() => null)
+          api.getUser(uid).then(setUser).catch(() => null)
           api.getTokenHistory(uid).then(setHistory).catch(() => null)
         }
       })
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err)
-      console.error('[handleBuy] error:', msg)
-      setDebugMsg(`❌ Ошибка: ${msg}`)
+      setDebugMsg(`❌ Ошибка fetch: ${msg}`)
     } finally {
       setBuying(null)
     }
@@ -104,7 +94,6 @@ export default function TokensPage() {
         <h1 className="font-bold text-lg">{t.tokens_title}</h1>
       </div>
 
-      {/* Balance */}
       <div className="rounded-2xl p-4 flex items-center gap-3" style={{ backgroundColor: 'var(--tg-secondary-bg)' }}>
         <span className="text-4xl">💎</span>
         <div>
@@ -113,14 +102,12 @@ export default function TokensPage() {
         </div>
       </div>
 
-      {/* Debug panel */}
       {debugMsg && (
         <div style={{ background: '#1a1a2e', color: '#eee', borderRadius: 12, padding: '10px 14px', fontSize: 13, fontFamily: 'monospace', wordBreak: 'break-all' }}>
           {debugMsg}
         </div>
       )}
 
-      {/* Packages */}
       <div className="grid grid-cols-2 gap-3">
         {PACKAGES.map((pkg, i) => (
           <button
@@ -149,7 +136,6 @@ export default function TokensPage() {
         Оплата через Telegram Stars — безопасно и мгновенно
       </p>
 
-      {/* Transaction history */}
       {history.length > 0 && (
         <div>
           <h2 className="text-sm font-semibold uppercase tracking-wide mb-3" style={{ color: 'var(--tg-hint)' }}>

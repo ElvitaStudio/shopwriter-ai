@@ -1,7 +1,7 @@
 import httpx
-from aiogram import Router, Bot
+from aiogram import Router
 from aiogram.filters import CommandStart
-from aiogram.types import Message, LabeledPrice
+from aiogram.types import Message
 
 from config import settings
 from keyboards.main_menu import get_main_menu, get_open_app_button
@@ -30,34 +30,10 @@ WELCOME = {
 }
 
 
-BUY_PACKAGES = {
-    "buy_20":   {"tokens": 20,   "stars": 50},
-    "buy_100":  {"tokens": 100,  "stars": 200},
-    "buy_500":  {"tokens": 500,  "stars": 800},
-    "buy_1000": {"tokens": 1000, "stars": 1400},
-}
-
-
 @router.message(CommandStart())
-async def start_handler(message: Message, bot: Bot):
+async def start_handler(message: Message):
     args = message.text.split(maxsplit=1)
-    param = args[1].strip() if len(args) > 1 else None
-
-    # Deep link from tokens page: ?start=buy_20
-    if param and param.startswith("buy_"):
-        pkg = BUY_PACKAGES.get(param)
-        if pkg:
-            await bot.send_invoice(
-                chat_id=message.chat.id,
-                title=f"ShopWriter AI — {pkg['tokens']} токенов",
-                description=f"{pkg['tokens']} генераций карточек товаров",
-                payload=f"tokens_{pkg['tokens']}",
-                currency="XTR",
-                prices=[LabeledPrice(label=f"{pkg['tokens']} токенов", amount=pkg["stars"])],
-            )
-            return
-
-    ref_code = param if param and not param.startswith("buy_") else None
+    ref_code = args[1].strip() if len(args) > 1 else None
 
     tg_user = message.from_user
     language = "ru"

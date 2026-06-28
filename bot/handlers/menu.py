@@ -116,22 +116,31 @@ async def handle_profile(message: Message):
 
 
 PACKAGES = [
-    {"payload": "tokens_20",   "tokens": 20,   "stars": 50,   "label_ru": "20 токенов",   "label_en": "20 tokens"},
-    {"payload": "tokens_100",  "tokens": 100,  "stars": 200,  "label_ru": "100 токенов",  "label_en": "100 tokens"},
-    {"payload": "tokens_500",  "tokens": 500,  "stars": 800,  "label_ru": "500 токенов",  "label_en": "500 tokens"},
-    {"payload": "tokens_1000", "tokens": 1000, "stars": 1400, "label_ru": "1000 токенов", "label_en": "1000 tokens"},
+    {"cb": "pkg_20",   "payload": "tokens_20",   "tokens": 20,   "stars": 50,
+     "name_ru": "Старт",   "name_ua": "Старт",   "name_en": "Starter",  "emoji": "🌱"},
+    {"cb": "pkg_100",  "payload": "tokens_100",  "tokens": 100,  "stars": 200,
+     "name_ru": "Базовый", "name_ua": "Базовий", "name_en": "Basic",    "emoji": "⚡️"},
+    {"cb": "pkg_500",  "payload": "tokens_500",  "tokens": 500,  "stars": 800,
+     "name_ru": "Про",     "name_ua": "Про",     "name_en": "Pro",      "emoji": "🚀"},
+    {"cb": "pkg_1000", "payload": "tokens_1000", "tokens": 1000, "stars": 1400,
+     "name_ru": "Бизнес",  "name_ua": "Бізнес",  "name_en": "Business", "emoji": "💼"},
 ]
 
 PAYLOAD_TOKENS: dict[str, int] = {p["payload"]: p["tokens"] for p in PACKAGES}
+CB_TO_PACKAGE: dict[str, dict] = {p["cb"]: p for p in PACKAGES}
+
+
+def _pkg_name(pkg: dict, lang: str) -> str:
+    return pkg.get(f"name_{lang}") or pkg["name_ru"]
 
 
 def _tokens_keyboard(lang: str) -> InlineKeyboardMarkup:
     rows = []
     for p in PACKAGES:
-        label = p["label_ru"] if lang != "en" else p["label_en"]
+        name = _pkg_name(p, lang)
         rows.append([InlineKeyboardButton(
-            text=f"💎 {label} — {p['stars']} ⭐",
-            callback_data=f"buy_{p['payload']}",  # e.g. buy_tokens_20
+            text=f"{p['emoji']} {name} — {p['tokens']} токенов · ⭐️ {p['stars']}",
+            callback_data=p["cb"],
         )])
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
@@ -140,9 +149,9 @@ def _tokens_keyboard(lang: str) -> InlineKeyboardMarkup:
 async def handle_buy_tokens(message: Message):
     lang = await _get_user_language(message.from_user.id)
     texts = {
-        "ru": "⚡️ <b>Купить токены</b>\n\nВыберите пакет. Оплата через Telegram Stars:",
-        "ua": "⚡️ <b>Купити токени</b>\n\nОберіть пакет. Оплата через Telegram Stars:",
-        "en": "⚡️ <b>Buy tokens</b>\n\nChoose a package. Payment via Telegram Stars:",
+        "ru": "⚡️ <b>Купить токены</b>\n\nВыберите пакет. Оплата через Telegram Stars ⭐️:",
+        "ua": "⚡️ <b>Купити токени</b>\n\nОберіть пакет. Оплата через Telegram Stars ⭐️:",
+        "en": "⚡️ <b>Buy tokens</b>\n\nChoose a package. Payment via Telegram Stars ⭐️:",
     }
     await message.answer(
         texts.get(lang, texts["ru"]),
@@ -151,30 +160,24 @@ async def handle_buy_tokens(message: Message):
     )
 
 
-@router.callback_query(lambda c: c.data and c.data.startswith("buy_tokens_"))
+@router.callback_query(lambda c: c.data in CB_TO_PACKAGE)
 async def handle_package_callback(call: CallbackQuery, bot: Bot):
-    payload = call.data[len("buy_"):]   # strips "buy_" → "tokens_20"
-    pkg = next((p for p in PACKAGES if p["payload"] == payload), None)
-    if not pkg:
-        await call.answer("Неверный пакет", show_alert=True)
-        return
-
-    await call.answer()
+    pkg = CB_TO_PACKAGE[call.data]
     lang = await _get_user_language(call.from_user.id)
-    label = pkg["label_ru"] if lang != "en" else pkg["label_en"]
-    desc_map = {
-        "ru": f"{pkg['tokens']} генераций карточек товаров",
-        "ua": f"{pkg['tokens']} генерацій карток товарів",
-        "en": f"{pkg['tokens']} product card generations",
+    name = _pkg_name(pkg, lang)
+    desc = {
+        "ru": f"{pkg['tokens']} генераций карточек товаров для маркетплейсов",
+        "ua": f"{pkg['tokens']} генерацій карток товарів для маркетплейсів",
+        "en": f"{pkg['tokens']} product card generations for marketplaces",
     }
-
+    await call.answer()
     await bot.send_invoice(
         chat_id=call.message.chat.id,
-        title=f"ShopWriter AI — {label}",
-        description=desc_map.get(lang, desc_map["ru"]),
-        payload=payload,
+        title=f"ShopWriter AI — {name}",
+        description=desc.get(lang, desc["ru"]),
+        payload=pkg["payload"],
         currency="XTR",
-        prices=[LabeledPrice(label=label, amount=pkg["stars"])],
+        prices=[LabeledPrice(label=name, amount=pkg["stars"])],
     )
 
 
@@ -197,15 +200,18 @@ async def successful_payment(message: Message):
             "payment_method": "stars",
         })
 
-    if resp.status_code == 200:
-        data = resp.json()
-        lang = await _get_user_language(message.from_user.id)
-        texts = {
-            "ru": f"✅ Оплата прошла успешно!\n\n💎 Начислено: <b>+{tokens} токенов</b>\n💰 Баланс: <b>{data['tokens_total']} токенов</b>",
-            "ua": f"✅ Оплата пройшла успішно!\n\n💎 Нараховано: <b>+{tokens} токенів</b>\n💰 Баланс: <b>{data['tokens_total']} токенів</b>",
-            "en": f"✅ Payment successful!\n\n💎 Added: <b>+{tokens} tokens</b>\n💰 Balance: <b>{data['tokens_total']} tokens</b>",
-        }
-        await message.answer(texts.get(lang, texts["ru"]), parse_mode="HTML")
+    if resp.status_code != 200:
+        await message.answer("✅ Оплата прошла, но произошла ошибка начисления. Напишите в поддержку.")
+        return
+
+    data = resp.json()
+    lang = await _get_user_language(message.from_user.id)
+    texts = {
+        "ru": f"✅ Оплата прошла успешно!\n\n💎 Начислено: <b>+{tokens} токенов</b>\n💰 Баланс: <b>{data['tokens_total']} токенов</b>",
+        "ua": f"✅ Оплата пройшла успішно!\n\n💎 Нараховано: <b>+{tokens} токенів</b>\n💰 Баланс: <b>{data['tokens_total']} токенів</b>",
+        "en": f"✅ Payment successful!\n\n💎 Added: <b>+{tokens} tokens</b>\n💰 Balance: <b>{data['tokens_total']} tokens</b>",
+    }
+    await message.answer(texts.get(lang, texts["ru"]), parse_mode="HTML")
 
 
 @router.message(lambda m: _is_button(m.text or "", "referral"))

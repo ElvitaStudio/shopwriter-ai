@@ -1,8 +1,10 @@
+import httpx
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel
 
+from app.config import settings
 from app.database import get_db
 from app.models import User, Transaction
 from app.services.payment_service import get_packages, get_package
@@ -78,6 +80,36 @@ async def purchase_package(data: PurchaseByPackageRequest, db: AsyncSession = De
         f"Покупка пакета {pkg['label']}: {pkg['tokens']} токенов",
         data.payment_method,
     )
+
+
+class CreateInvoiceRequest(BaseModel):
+    telegram_id: int
+    package_id: str
+
+
+@router.post("/create_invoice")
+async def create_invoice(data: CreateInvoiceRequest):
+    pkg = get_package(data.package_id)
+    if not pkg:
+        raise HTTPException(status_code=400, detail="Invalid package")
+
+    tg_api_url = f"https://api.telegram.org/bot{settings.TELEGRAM_BOT_TOKEN}/createInvoiceLink"
+    payload = {
+        "title": f"ShopWriter AI — {pkg['label']}",
+        "description": f"{pkg['tokens']} генераций карточек товаров для маркетплейсов",
+        "payload": f"tokens_{pkg['tokens']}",
+        "currency": "XTR",
+        "prices": [{"label": pkg["label"], "amount": pkg["stars"]}],
+    }
+
+    async with httpx.AsyncClient() as client:
+        resp = await client.post(tg_api_url, json=payload)
+
+    if resp.status_code != 200 or not resp.json().get("ok"):
+        raise HTTPException(status_code=502, detail="Telegram API error")
+
+    invoice_url = resp.json()["result"]
+    return {"invoice_url": invoice_url}
 
 
 @router.get("/history/{telegram_id}")

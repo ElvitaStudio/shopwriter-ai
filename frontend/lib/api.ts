@@ -100,6 +100,12 @@ export const api = {
       body: JSON.stringify({ telegram_id: telegramId, package_id: packageId, payment_method: paymentMethod }),
     }),
 
+  createInvoice: (telegramId: number, packageId: string) =>
+    request<{ invoice_url: string }>('/tokens/create_invoice', {
+      method: 'POST',
+      body: JSON.stringify({ telegram_id: telegramId, package_id: packageId }),
+    }),
+
   getTokenHistory: (telegramId: number) =>
     request<Transaction[]>(`/tokens/history/${telegramId}`),
 

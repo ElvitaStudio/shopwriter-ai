@@ -41,6 +41,7 @@ export interface TelegramWebApp {
     selectionChanged: () => void
   }
   openTelegramLink: (url: string) => void
+  openInvoice: (url: string, callback?: (status: string) => void) => void
   showAlert: (message: string, callback?: () => void) => void
   showConfirm: (message: string, callback?: (confirmed: boolean) => void) => void
 }

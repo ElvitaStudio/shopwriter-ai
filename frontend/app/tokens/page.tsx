@@ -27,6 +27,7 @@ export default function TokensPage() {
   const [user, setUser] = useState<UserProfile | null>(null)
   const [history, setHistory] = useState<Transaction[]>([])
   const [locale, setLocale] = useState<Locale>('ru')
+  const [buying, setBuying] = useState<string | null>(null)
 
   useEffect(() => {
     const saved = (localStorage.getItem('locale') as Locale) ?? getTelegramLanguage()
@@ -45,12 +46,25 @@ export default function TokensPage() {
   const t = getTranslations(locale)
   const packageNames = PACKAGE_NAMES[locale] ?? PACKAGE_NAMES.ru
 
-  const handleBuy = (pkg: typeof PACKAGES[number]) => {
+  const handleBuy = async (pkg: typeof PACKAGES[number]) => {
+    const uid = getTelegramUserId()
     const twa = getTelegramWebApp()
-    if (twa) {
-      // Opens bot with deep link — bot sends invoice with Telegram Stars
-      twa.openTelegramLink(`https://t.me/shopwriter_bot?start=buy_${pkg.tokens}`)
-      twa.close()
+    if (!uid || !twa) return
+
+    setBuying(pkg.id)
+    try {
+      const { invoice_url } = await api.createInvoice(uid, pkg.id)
+      twa.openInvoice(invoice_url, (status: string) => {
+        if (status === 'paid') {
+          // Refresh balance after payment
+          api.getUser(uid).then((u) => setUser(u)).catch(() => null)
+          api.getTokenHistory(uid).then(setHistory).catch(() => null)
+        }
+      })
+    } catch {
+      // silently fail — user stays on page
+    } finally {
+      setBuying(null)
     }
   }
 
@@ -76,7 +90,8 @@ export default function TokensPage() {
           <button
             key={pkg.id}
             onClick={() => handleBuy(pkg)}
-            className="rounded-2xl p-4 text-left space-y-2 active:scale-95 transition-transform"
+            disabled={buying === pkg.id}
+            className="rounded-2xl p-4 text-left space-y-2 active:scale-95 transition-transform disabled:opacity-50"
             style={{ backgroundColor: 'var(--tg-secondary-bg)' }}
           >
             <div className="flex items-center justify-between">

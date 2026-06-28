@@ -28,6 +28,7 @@ export default function TokensPage() {
   const [history, setHistory] = useState<Transaction[]>([])
   const [locale, setLocale] = useState<Locale>('ru')
   const [buying, setBuying] = useState<string | null>(null)
+  const [debugMsg, setDebugMsg] = useState<string>('')
 
   useEffect(() => {
     const saved = (localStorage.getItem('locale') as Locale) ?? getTelegramLanguage()
@@ -47,22 +48,50 @@ export default function TokensPage() {
   const packageNames = PACKAGE_NAMES[locale] ?? PACKAGE_NAMES.ru
 
   const handleBuy = async (pkg: typeof PACKAGES[number]) => {
+    console.log('[handleBuy] clicked', pkg.id)
     const uid = getTelegramUserId()
     const twa = getTelegramWebApp()
-    if (!uid || !twa) return
+    console.log('[handleBuy] uid:', uid, 'twa:', !!twa)
+    setDebugMsg(`uid=${uid} twa=${!!twa} pkg=${pkg.id}`)
+
+    if (!uid) {
+      setDebugMsg('❌ Нет telegram_id — откройте через Telegram')
+      return
+    }
+    if (!twa) {
+      setDebugMsg('❌ Нет Telegram WebApp — откройте через Telegram')
+      return
+    }
 
     setBuying(pkg.id)
+    setDebugMsg(`⏳ Создаём инвойс для ${pkg.id}...`)
     try {
-      const { invoice_url } = await api.createInvoice(uid, pkg.id)
-      twa.openInvoice(invoice_url, (status: string) => {
+      const res = await fetch('http://localhost:8008/api/tokens/create_invoice', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ telegram_id: uid, package_id: pkg.id }),
+      })
+      console.log('[handleBuy] fetch status:', res.status)
+      if (!res.ok) {
+        const text = await res.text()
+        setDebugMsg(`❌ Backend error ${res.status}: ${text}`)
+        return
+      }
+      const data = await res.json()
+      console.log('[handleBuy] invoice_url:', data.invoice_url)
+      setDebugMsg(`✅ invoice_url получен, открываем...`)
+      twa.openInvoice(data.invoice_url, (status: string) => {
+        console.log('[handleBuy] payment status:', status)
+        setDebugMsg(`💳 Статус оплаты: ${status}`)
         if (status === 'paid') {
-          // Refresh balance after payment
           api.getUser(uid).then((u) => setUser(u)).catch(() => null)
           api.getTokenHistory(uid).then(setHistory).catch(() => null)
         }
       })
-    } catch {
-      // silently fail — user stays on page
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err)
+      console.error('[handleBuy] error:', msg)
+      setDebugMsg(`❌ Ошибка: ${msg}`)
     } finally {
       setBuying(null)
     }
@@ -83,6 +112,13 @@ export default function TokensPage() {
           <p className="text-sm" style={{ color: 'var(--tg-hint)' }}>{t.current_balance}</p>
         </div>
       </div>
+
+      {/* Debug panel */}
+      {debugMsg && (
+        <div style={{ background: '#1a1a2e', color: '#eee', borderRadius: 12, padding: '10px 14px', fontSize: 13, fontFamily: 'monospace', wordBreak: 'break-all' }}>
+          {debugMsg}
+        </div>
+      )}
 
       {/* Packages */}
       <div className="grid grid-cols-2 gap-3">

@@ -31,8 +31,10 @@ function GeneratePage() {
     image_base64?: string
   }) => {
     const telegramId = getTelegramUserId()
+    console.log('[generate] handleSubmit called, telegramId:', telegramId, 'platform:', platform, 'data:', data)
+
     if (!telegramId) {
-      setError('Откройте приложение через Telegram')
+      setError('❌ Нет telegram_id — откройте приложение через Telegram')
       return
     }
 
@@ -40,20 +42,36 @@ function GeneratePage() {
     setError(null)
     setResult(null)
 
+    const payload = {
+      telegram_id: telegramId,
+      platform,
+      language: locale,
+      ...data,
+    }
+    console.log('[generate] POST /api/cards/generate payload:', payload)
+
     try {
-      const card = await api.generateCard({
-        telegram_id: telegramId,
-        platform,
-        language: locale,
-        ...data,
+      const res = await fetch('/api/cards/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
       })
-      setResult(card)
-    } catch (e: any) {
-      if (e.message?.includes('Insufficient')) {
-        setError(t.error_insufficient)
-      } else {
-        setError(t.error_generic)
+      console.log('[generate] response status:', res.status)
+
+      if (!res.ok) {
+        const text = await res.text()
+        console.error('[generate] backend error:', res.status, text)
+        setError(`❌ Backend ${res.status}: ${text}`)
+        return
       }
+
+      const card = await res.json()
+      console.log('[generate] success, card_id:', card.card_id)
+      setResult(card)
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err)
+      console.error('[generate] fetch failed:', msg)
+      setError(`❌ Ошибка сети: ${msg}`)
     } finally {
       setLoading(false)
     }
@@ -76,7 +94,16 @@ function GeneratePage() {
       </div>
 
       {error && (
-        <div className="bg-red-500/10 border border-red-500/30 text-red-500 rounded-xl px-4 py-3 text-sm">
+        <div
+          className="rounded-xl px-4 py-3 text-sm"
+          style={{
+            background: 'rgba(239, 68, 68, 0.12)',
+            border: '1px solid rgba(239, 68, 68, 0.4)',
+            color: '#ef4444',
+            fontFamily: 'monospace',
+            wordBreak: 'break-all',
+          }}
+        >
           {error}
         </div>
       )}

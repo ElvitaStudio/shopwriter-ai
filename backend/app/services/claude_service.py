@@ -1,7 +1,19 @@
 import json
+import logging
+import re
+
 import anthropic
 
 from app.config import settings
+
+logger = logging.getLogger(__name__)
+
+CODE_FENCE_RE = re.compile(r"^```(?:json)?\s*\n?(.*?)\n?```$", re.DOTALL)
+
+
+def _strip_code_fence(raw: str) -> str:
+    match = CODE_FENCE_RE.match(raw.strip())
+    return match.group(1).strip() if match else raw
 
 SYSTEM_PROMPTS = {
     "ru": (
@@ -101,4 +113,14 @@ async def generate_card(
     )
 
     raw = response.content[0].text.strip()
-    return json.loads(raw)
+    logger.info("Claude raw response (%d chars): %s", len(raw), raw)
+
+    cleaned = _strip_code_fence(raw)
+
+    try:
+        return json.loads(cleaned)
+    except json.JSONDecodeError as e:
+        preview = raw[:200]
+        raise ValueError(
+            f"Claude API returned invalid JSON ({e}). First 200 chars of raw response: {preview!r}"
+        ) from e
